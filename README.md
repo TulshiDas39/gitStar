@@ -1,30 +1,10 @@
 # kr-youtube-downloader-0.0.1
 
-[![Tulshi Das|Bangladesh](https://raw.githubusercontent.com/TulshiDas39/kr-youtube-downloader/master/icon.ico)](https://github.com/TulshiDas39/kr-youtube-downloader)
+[![Tulshi Das|Bangladesh](https://raw.githubusercontent.com/TulshiDas39/kr-youtube-downloader/master/icon.ico)](https://github.com/TulshiDas39)
 
 [![Build Status](https://travis-ci.org/joemccann/dillinger.svg?branch=master)](https://travis-ci.org/joemccann/dillinger)
 
-kr-youtube-downloader is a desktop application to download youtube videos from youtube.
-
-  - single Video download support
-  - concurrent download support
-  - support windows,linux and mac plateform
-  - apps is getting updated day by day and more features are coming
-  
-### Installation
-
-kr-youtube-downloader doesn't require any 3rd party dependencies to install.
- - click [here](https://github.com/TulshiDas39/kr-youtube-downloader/releases/download/v1.0.0/kr-youtube-downloader.Setup.1.0.0.exe) to download the installer.
- - run the installer and complete the steps
- - to get the best speed exclude the installation folder in windows defender.
- - get step by step video guid [here](https://www.youtube.com/watch?v=ZRD9thyD48A)
- 
-
-# New Features!
-
-  - simultaneously download multiple videos
-
-The features are tested on windows 10 pc. So, if you feel problem on yours pc please create an issue in this repository. If you have any recommendation or suggestion you can send me a mail to bsse0811@iit.du.ac.bd.
+kr-youtube-downloader will be a desktop application to perform git activity using GUI.
 
 ### Tech
 
@@ -35,9 +15,6 @@ kr-youtube-downloader uses the following technology:
 
 * [Html,CSS] - for building the GUI.
 
-
-And of course kr-youtube-downloader itself is open source with a [public repository](https://github.com/TulshiDas39/kr-youtube-downloader).
- on GitHub.
 
 
 ### Development
