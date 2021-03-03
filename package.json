@@ -284,6 +284,7 @@
     "redux": "^4.0.5",
     "redux-thunk": "^2.3.0",
     "regenerator-runtime": "^0.13.5",
+    "simple-git": "^2.36.0",
     "source-map-support": "^0.5.19",
     "ytdl-core": "^4.5.0",
     "ytpl": "^2.0.4"

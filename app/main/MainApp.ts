@@ -1,4 +1,5 @@
 import { DownloadManager } from "./DownloadManager";
+import { GitManager } from "./GitManager";
 
 export class MainApp {
   constructor() {
@@ -6,7 +7,7 @@ export class MainApp {
   }
 
   init() {
-    console.log('ok working');
-    new DownloadManager();
+    // new DownloadManager();
+    new GitManager();
   }
 }
