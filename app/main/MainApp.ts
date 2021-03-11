@@ -1,4 +1,3 @@
-import { DownloadManager } from "./DownloadManager";
 import { GitManager } from "./GitManager";
 
 export class MainApp {

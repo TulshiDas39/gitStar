@@ -1,5 +1,6 @@
 import { ipcRenderer } from "electron";
 import React, { useEffect } from "react";
+import { BranchSummary, DefaultLogFields, LogResult } from "simple-git";
 import { Main_Events, Renderer_Events } from "../../constants/constants";
 import './home.css';
 
@@ -13,12 +14,20 @@ interface IState{
     useEffect(()=>{
 
       const handleTest=()=>{
-        ipcRenderer.on(Main_Events.TEST,(_,data:any)=>{
+        ipcRenderer.on(Main_Events.TEST,(_,data:LogResult<DefaultLogFields>)=>{
           console.log(data);
         })
       }
 
+      const handleBranchlist=()=>{
+        ipcRenderer.on(Main_Events.ALL_BRANCH,(_,data:BranchSummary)=>{
+          console.log(data);
+
+        })
+      }
+
       handleTest();
+      handleBranchlist();
 
     },[])
 
