@@ -4,6 +4,7 @@ import path from "path";
 import { app, ipcMain } from "electron";
 import { mainWindow } from "../main.dev";
 import { Main_Events, Renderer_Events } from "../constants/constants";
+import { IRepository } from "../lib";
 
 
 export class GitManager{
@@ -51,8 +52,21 @@ export class GitManager{
       })
     }
 
+    handleRepositoryList=()=>{
+      ipcMain.on(Renderer_Events.GET_REPOSITORIES,()=>{
+          const repositoryList:IRepository[]=[
+            {
+              name: 'joylist-webapp',
+              path: path.join(app.getPath('documents'),'workspace','joylist','joylist-webapp'),
+            }
+          ];
+          mainWindow?.webContents.send(Main_Events.ALL_REPOSITORIES,repositoryList);
+      })
+    }
+
     handleRendererEvents(){
       this.handleTest();
+      this.handleRepositoryList();
     }
   
   }

@@ -1,13 +1,15 @@
-import React from "react";
+import React, { PropsWithChildren } from "react";
+import { TopNav } from "../components/common";
 import { Modals } from "../components/common/Modals";
 
-export class Layout extends React.PureComponent{
-  render(){
-    return (
-      <div style={{height:'100vh',overflow:'overlay'}}>
-        <Modals/>
-        {this.props.children}
-      </div>
-    )
-  }
+function LayoutComponent(props:PropsWithChildren<React.ReactNode>){
+  return (
+    <div style={{height:'100vh',overflow:'overlay'}}>
+      <Modals/>
+      <TopNav />
+      {props.children}
+    </div>
+  )
 }
+
+export const Layout = React.memo(LayoutComponent);

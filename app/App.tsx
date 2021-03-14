@@ -5,6 +5,7 @@ import { Switch, Route } from 'react-router-dom';
 import { Layout } from './containers/Layout';
 import { UI_Routes } from './lib/routes';
 import { Home } from './components/home/Home';
+import { Repositories } from './components/home/Repositories';
 
 // Lazily load routes and code split with webpacck
 const LazyCounterPage = React.lazy(() =>
@@ -22,7 +23,7 @@ export default function Routes() {
     <Layout>
       <Switch>
         <Route path={UI_Routes.COUNTER} component={CounterPage} />
-        <Route path={UI_Routes.ROOT} component={Home} />
+        <Route path={UI_Routes.ROOT} component={Repositories} />
       </Switch>
     </Layout>
   );

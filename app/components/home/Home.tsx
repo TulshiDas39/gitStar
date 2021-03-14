@@ -42,8 +42,4 @@ interface IState{
       </div>
     )
 }
-
-
-// const mapStateToProps = (state:IReduxState)=>state.home;
-// const connector = connect(mapStateToProps);
 export const Home = React.memo(HomeComponent);
