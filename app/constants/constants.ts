@@ -9,6 +9,8 @@ export const Renderer_Events = {
   DOWNLOAD_SINGLE_VIDEO_FROM_INFO:"DOWNLOAD_SINGLE_VIDEO_FROM_INFO",
   TEST:"TEST",
   GET_REPOSITORIES:"GET_REPOSITORIES",
+  GET_COMMIT_LIST:"GET_COMMIT_LIST",
+  GET_REPO_INFO:"GET_REPO_INFO",
 }
 
 export const Main_Events = {
@@ -23,6 +25,8 @@ export const Main_Events = {
   TEST:'TEST',
   ALL_BRANCH:'ALL_BRANCH',
   ALL_REPOSITORIES:'ALL_REPOSITORIES',
+  COMMIT_LIST:'COMMIT_LIST',
+  REPO_INFO:'REPO_INFO',
 }
 
 export const Constants={

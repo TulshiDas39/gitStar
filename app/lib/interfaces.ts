@@ -1,14 +1,18 @@
-import { DefaultLogFields } from "simple-git";
+import { BranchSummary, DefaultLogFields, LogResult } from "simple-git";
 import { IStore } from "../store";
 
 export interface ICommit extends DefaultLogFields{
-  branchName:string;
   avrebHash:string;
 }
 
 export interface IRepository{
   path:string;
   name:string;
+}
+
+export interface IRepositoryInfo{
+  branchSummery:BranchSummary;
+  commits:LogResult<ICommit>;
 }
 
 export type IReduxState = ReturnType<IStore['getState']>

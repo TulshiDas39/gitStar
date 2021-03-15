@@ -1,14 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useSelectorTyped } from '../../store';
 import { RepoLeftNav, RepoRightPanel, TRepoLeftTab } from './subComponents';
 import { useMultiState } from '../common/hooks';
+import { useDispatch } from 'react-redux';
+import { ActionRepository } from './slice';
+import { ipcRenderer } from 'electron';
+import { Main_Events, Renderer_Events } from '../../constants/constants';
+import { IRepositoryInfo } from '../../lib';
 
 interface IState{
-    selectedTab:TRepoLeftTab
+    selectedTab:TRepoLeftTab;
+    repoInfo:IRepositoryInfo;
 }
 
 const initialState:IState={
     selectedTab:"commit",
+    repoInfo:null!,
 }
 
 function RepositoryComponent(){
@@ -17,6 +24,22 @@ function RepositoryComponent(){
     }))
 
     const [state,setState]= useMultiState(initialState);
+    const dispatch = useDispatch();
+
+    useEffect(()=>{
+        ipcRenderer.on(Main_Events.REPO_INFO, (_, data: IRepositoryInfo) => {
+            console.log(data);
+            setState({ repoInfo: data });
+        })
+
+        return ()=>{
+            dispatch(ActionRepository.setRepository(undefined!));
+        }
+    },[])
+
+    useEffect(()=>{
+        if(store.selectedRepository) ipcRenderer.send(Renderer_Events.GET_REPO_INFO,store.selectedRepository);
+    },[store.selectedRepository])
 
     if(!store.selectedRepository) return <p>No Repository Selected</p>;
     return (
