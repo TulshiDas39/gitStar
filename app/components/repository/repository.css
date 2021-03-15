@@ -1,0 +1,14 @@
+.repoLeftPanel{
+    background-color: chocolate;
+}
+.repoLeftPanel>div{
+    color: white;
+}
+
+.repoLeftPanel>div:hover{
+    cursor: pointer;
+}
+
+.repoLeftPanel>div.active{
+    background-color: blueviolet;
+}

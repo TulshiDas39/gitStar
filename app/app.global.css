@@ -5,6 +5,10 @@
 @import '~@fortawesome/fontawesome-free/css/all.css';
 @import '~bootstrap/dist/css/bootstrap.min.css';
 
+*{
+  box-sizing: border-box;
+}
+
 body {
   position: relative;
   color: white;
@@ -26,6 +30,10 @@ body {
 .icon-spin {
   -webkit-animation: icon-spin 2s infinite linear;
           animation: icon-spin 2s infinite linear;
+}
+
+.hover-underline:hover{
+  text-decoration: underline;
 }
 
 @-webkit-keyframes icon-spin {
@@ -54,3 +62,11 @@ body {
   border:1px solid rgb(218, 206, 206);
   border-radius: 50%;
 }
+
+
+
+
+
+
+/* component specific styles */
+@import './components/repository/repository.css';

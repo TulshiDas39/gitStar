@@ -5,6 +5,7 @@ import { History } from 'history';
 import counterReducer from './components/counter/counterSlice';
 import { ModalReduce } from './components/common/Modals';
 import { HomeReducer } from './components/home/slice';
+import { RepositoryReducer } from './components/repository/slice';
 
 export default function createRootReducer(history: History) {
   return combineReducers({
@@ -12,6 +13,7 @@ export default function createRootReducer(history: History) {
     counter: counterReducer,
     modals:ModalReduce,
     home:HomeReducer,
+    repository:RepositoryReducer,
   });
 }
 

@@ -2,7 +2,7 @@ import React from "react";
 
 function TopNavComponent(){
     return (
-        <div className="d-flex border">
+        <div className="d-flex border topNav">
             <p className="">Repositories</p>
         </div>
     )

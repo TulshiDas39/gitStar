@@ -1,9 +1,11 @@
 import { ipcRenderer } from "electron";
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
+import { useDispatch } from "react-redux";
 import { Main_Events, Renderer_Events } from "../../constants/constants";
 import { IRepository } from "../../lib";
 import { useMultiState } from "../common/hooks";
-import './home.css';
+import { ActionRepository } from "../repository/slice";
+import { RepositoryItem } from "./subComponents";
 
 
 interface IState{
@@ -17,6 +19,7 @@ const initialState:IState={
 
  function RepositoriesComponent(){
     const [state,setState]= useMultiState<IState>(initialState);
+    const dispatch = useDispatch();
 
     useEffect(()=>{
       
@@ -32,14 +35,16 @@ const initialState:IState={
 
     },[])
 
+
+    const handleSelect = useCallback((x:IRepository)=>{
+      dispatch(ActionRepository.setRepository(x));
+    },[])
+
     return (
       <div className="container text-center">
         {
           state.repositoryList.map(x=>(
-            <div key={x.path}>
-              <h5>{x.name}</h5>
-              <p>{x.path}</p>
-            </div>
+            <RepositoryItem key={x.path} handleSelect={handleSelect} repo={x} />
           ))
         }
       </div>

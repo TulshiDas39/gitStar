@@ -4,8 +4,7 @@ import { Switch, Route } from 'react-router-dom';
 // import HomePage from './containers/HomePage';
 import { Layout } from './containers/Layout';
 import { UI_Routes } from './lib/routes';
-import { Home } from './components/home/Home';
-import { Repositories } from './components/home/Repositories';
+import { Repositories, Repository } from './components';
 
 // Lazily load routes and code split with webpacck
 const LazyCounterPage = React.lazy(() =>
@@ -23,7 +22,8 @@ export default function Routes() {
     <Layout>
       <Switch>
         <Route path={UI_Routes.COUNTER} component={CounterPage} />
-        <Route path={UI_Routes.ROOT} component={Repositories} />
+        <Route exact path={UI_Routes.ROOT} component={Repositories} />
+        <Route exact path={UI_Routes.REPOSITORY} component={Repository} />
       </Switch>
     </Layout>
   );

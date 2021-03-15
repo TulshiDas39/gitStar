@@ -7,7 +7,9 @@ function LayoutComponent(props:PropsWithChildren<React.ReactNode>){
     <div style={{height:'100vh',overflow:'overlay'}}>
       <Modals/>
       <TopNav />
-      {props.children}
+      <div style={{height:'95%'}}>
+        {props.children}
+      </div>
     </div>
   )
 }

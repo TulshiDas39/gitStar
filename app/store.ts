@@ -1,4 +1,4 @@
-import { configureStore, getDefaultMiddleware, Action } from '@reduxjs/toolkit';
+import { configureStore, getDefaultMiddleware, Action, AnyAction } from '@reduxjs/toolkit';
 import { createHashHistory } from 'history';
 import { routerMiddleware } from 'connected-react-router';
 import { createLogger } from 'redux-logger';
@@ -48,4 +48,4 @@ export const configuredStore = (initialState?: RootState) => {
 export type IStore = ReturnType<typeof configuredStore>;
 export type AppThunk = ThunkAction<void, RootState, unknown, Action<string>>;
 
-export const useSelectorTyped = createSelectorHook<IReduxState>();
+export const useSelectorTyped = createSelectorHook<IReduxState,AnyAction>();
