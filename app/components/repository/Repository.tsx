@@ -20,7 +20,7 @@ const initialState:IState={
 
 function RepositoryComponent(){
     const store = useSelectorTyped(state=>({
-        selectedRepository:state.repository
+        repository:state.repository
     }))
 
     const [state,setState]= useMultiState(initialState);
@@ -38,10 +38,10 @@ function RepositoryComponent(){
     },[])
 
     useEffect(()=>{
-        if(store.selectedRepository) ipcRenderer.send(Renderer_Events.GET_REPO_INFO,store.selectedRepository);
-    },[store.selectedRepository])
+        if(store.repository.selectedRepository) ipcRenderer.send(Renderer_Events.GET_REPO_INFO,store.repository.selectedRepository);
+    },[store.repository.selectedRepository])
 
-    if(!store.selectedRepository) return <p>No Repository Selected</p>;
+    if(!store.repository) return <p>No Repository Selected</p>;
     return (
         <div className="row no-gutters h-100">
             <RepoLeftNav onTabChange={(tab)=>setState({selectedTab:tab})} selectedTab={state.selectedTab} />

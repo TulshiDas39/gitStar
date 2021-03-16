@@ -22,6 +22,7 @@ export class GitManager{
     }
 
     configureRepo(repoPath:string){
+      console.log(repoPath);
         // const repoPath = path.join(app.getPath('documents'),'workspace','joylist','joylist-webapp');
         const options: Partial<SimpleGitOptions> = {
             baseDir: repoPath,
