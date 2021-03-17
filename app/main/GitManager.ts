@@ -10,6 +10,7 @@ import { ICommit, IRepository, IRepositoryInfo } from "../lib";
 export class GitManager{
 
   private git: SimpleGit = null!;
+  private repoInfo = {} as IRepositoryInfo;
 
     constructor(){
       this.init()
@@ -31,23 +32,38 @@ export class GitManager{
          };
         this.git = simpleGit(options);   
 
-        const repoInfo:IRepositoryInfo={} as any;
+        // const repoInfo:IRepositoryInfo={} as any;
 
         const getLogs=()=>{
           const logCallBack=(_,data:LogResult<ICommit>)=>{
-            repoInfo.commits = data;
-            mainWindow?.webContents.send(Main_Events.REPO_INFO,repoInfo);
+            this.repoInfo.commits = data;
+            this.getBranchDetails();
+            mainWindow?.webContents.send(Main_Events.REPO_INFO,this.repoInfo);
           }
-          this.git.log(["--all"],logCallBack as any);
+          this.git.log(["--first-parent","--all"],logCallBack as any);
         }
 
         const branchCallback=(error:GitError,data:BranchSummary)=>{
-          repoInfo.branchSummery = data;
+          this.repoInfo.branchSummery = data;
           getLogs();
         }
         this.git.branch(["-a"],branchCallback as any);
         // git.branch(["-a"],branchCallBack)
          //console.log(summery);
+    }
+
+    getBranchDetails=()=>{
+      const uniqueBranchNames:string[]=[];
+      this.repoInfo.branchSummery.all.forEach(b=>{
+        const name=b.split("/").pop();
+        if(!!name && !uniqueBranchNames.includes(name))uniqueBranchNames.push(name);
+      })
+      this.repoInfo.uniqueBrancNames = uniqueBranchNames;
+
+      this.repoInfo.commits.all.forEach(c=>{
+        
+      })
+
     }
   
     handleGetCommitList=()=>{
@@ -68,6 +84,10 @@ export class GitManager{
             {
               name: 'joylist-webapp',
               path: path.join(app.getPath('documents'),'workspace','joylist','joylist-webapp'),
+            },
+            {
+              name: 'P1stonUIRepo',
+              path: path.join(app.getPath('documents'),'workspace','piston','P1stonUIRepo'),
             }
           ];
           mainWindow?.webContents.send(Main_Events.ALL_REPOSITORIES,repositoryList);
