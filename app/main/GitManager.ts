@@ -5,12 +5,19 @@ import { app, ipcMain } from "electron";
 import { mainWindow } from "../main.dev";
 import { Main_Events, Renderer_Events } from "../constants/constants";
 import { ICommit, IRepository, IRepositoryInfo } from "../lib";
+import moment from "moment";
 
 
 export class GitManager{
 
   private git: SimpleGit = null!;
-  private repoInfo = {} as IRepositoryInfo;
+  private repoInfo:IRepositoryInfo = {
+    branchDetails:[],
+    branchSummery:undefined!,
+    commits:undefined!,
+    lastReferencesByBranch:[],
+    uniqueBrancNames:[],
+  };
 
     constructor(){
       this.init()
@@ -34,36 +41,67 @@ export class GitManager{
 
         // const repoInfo:IRepositoryInfo={} as any;
 
-        const getLogs=()=>{
-          const logCallBack=(_,data:LogResult<ICommit>)=>{
-            this.repoInfo.commits = data;
-            this.getBranchDetails();
-            mainWindow?.webContents.send(Main_Events.REPO_INFO,this.repoInfo);
-          }
-          this.git.log(["--first-parent","--all"],logCallBack as any);
-        }
+        // const getLogs=()=>{
+        //   const logCallBack=(_,data:LogResult<ICommit>)=>{
+        //     this.repoInfo.commits = data;
+        //     this.getBranchDetails();
+        //     // mainWindow?.webContents.send(Main_Events.REPO_INFO,this.repoInfo);
+        //   }
+        //   this.git.log(["--first-parent","--all"],logCallBack as any);
+        // }
+        this.setLogs();
 
-        const branchCallback=(error:GitError,data:BranchSummary)=>{
-          this.repoInfo.branchSummery = data;
-          getLogs();
-        }
-        this.git.branch(["-a"],branchCallback as any);
+        // const branchCallback=(error:GitError,data:BranchSummary)=>{
+        //   this.repoInfo.branchSummery = data;
+        //   getLogs();
+        // }
+        // this.git.branch(["-a"],branchCallback as any);
         // git.branch(["-a"],branchCallBack)
          //console.log(summery);
     }
 
-    getBranchDetails=()=>{
+    setBranchSummery=()=>{
+      const branchCallback=(error:GitError,data:BranchSummary)=>{
+        this.repoInfo.branchSummery = data;
+        this.setUniqueBranchNames();
+      }
+      this.git.branch(["-a"],branchCallback as any);
+    }
+
+    setLogs=()=>{
+      const logCallBack=(_,data:LogResult<ICommit>)=>{
+        this.repoInfo.commits = data;
+        this.setBranchSummery();
+        // mainWindow?.webContents.send(Main_Events.REPO_INFO,this.repoInfo);
+      }
+      this.git.log(["--first-parent","--all"],logCallBack as any);
+    }
+
+    setUniqueBranchNames=()=>{
       const uniqueBranchNames:string[]=[];
       this.repoInfo.branchSummery.all.forEach(b=>{
         const name=b.split("/").pop();
         if(!!name && !uniqueBranchNames.includes(name))uniqueBranchNames.push(name);
       })
       this.repoInfo.uniqueBrancNames = uniqueBranchNames;
+      this.setLastReferencesOfBranches();
+    }
 
-      this.repoInfo.commits.all.forEach(c=>{
-        
+    setLastReferencesOfBranches=()=>{      
+      this.repoInfo.lastReferencesByBranch = this.repoInfo.uniqueBrancNames.map(name=>({
+        branchName:name,
+        dateTime: new Date().toISOString(),
+      }))
+      this.repoInfo.lastReferencesByBranch.forEach(b=>{
+        const referencedCommits = this.repoInfo.commits.all.filter(c=>c.message.includes(`branch '${b.branchName}'`))
+        referencedCommits.forEach(commit=>{
+            if(moment(commit.date).isBefore(b.dateTime) ) b.dateTime = commit.date;          
+        })
       })
+    }
 
+    sendRepoInfoToRenderer=()=>{
+      mainWindow?.webContents.send(Main_Events.REPO_INFO,this.repoInfo);
     }
   
     handleGetCommitList=()=>{

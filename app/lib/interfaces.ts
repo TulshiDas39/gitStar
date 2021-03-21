@@ -15,6 +15,12 @@ export interface IRepositoryInfo{
   commits:LogResult<ICommit>;
   branchDetails:BranchDetails[];
   uniqueBrancNames:string[];
+  lastReferencesByBranch: ILastReference[];
+}
+
+export interface ILastReference{
+  branchName:string;
+  dateTime:string;
 }
 
 export type IReduxState = ReturnType<IStore['getState']>
