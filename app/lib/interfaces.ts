@@ -35,4 +35,5 @@ export interface BranchDetails{
   name:string;
   commits:ICommit[];
   lastCommitsByRemotes:ILastCommitByRemote[];
+  noDerivedCommits:boolean;
 }

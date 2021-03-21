@@ -4,7 +4,7 @@ import path from "path";
 import { app, ipcMain } from "electron";
 import { mainWindow } from "../main.dev";
 import { Main_Events, Renderer_Events } from "../constants/constants";
-import { ICommit, IRepository, IRepositoryInfo } from "../lib";
+import { BranchDetails, ICommit, IRepository, IRepositoryInfo } from "../lib";
 import moment from "moment";
 
 
@@ -126,6 +126,7 @@ export class GitManager{
           commits:[...data.all],
           lastCommitsByRemotes:[],
           name:branchName,
+          noDerivedCommits:false,
         });
         if(this.repoInfo.branchDetails.length === this.repoInfo.branchSummery.all.length) this.normaliseCommits();
         // mainWindow?.webContents.send(Main_Events.REPO_INFO,this.repoInfo);
@@ -140,7 +141,8 @@ export class GitManager{
         branch.lastCommitsByRemotes.push({commit:branch.commits[0],remote:""});
 
         this.repoInfo.remotes.forEach(r=>{
-          const remoteBranch = this.repoInfo.branchDetails.find(x=>x.name ===  "remotes/"+r+"/"+name);
+          const remoteBranchName = "remotes/"+r+"/"+name;
+          const remoteBranch = this.repoInfo.branchDetails.find(x=>x.name ===  remoteBranchName);
           if(!remoteBranch) return;
 
           branch.lastCommitsByRemotes.push({
@@ -149,9 +151,37 @@ export class GitManager{
           });
 
           if(remoteBranch.commits.length > branch.commits.length) branch.commits = remoteBranch.commits;
+          this.repoInfo.branchDetails = this.repoInfo.branchDetails.filter(b=> b.name !== remoteBranchName);
         })
       })
+      this.removeDerivedCommits()
+    }
+
+    removeDerivedCommits=()=>{
+      this.repoInfo.branchDetails.forEach(b=>{
+        if(b.noDerivedCommits) return;
+        const commitsFromSecond= b.commits.slice(1);
+        for(let c of commitsFromSecond){
+          const branchesOfThisCommit = this.repoInfo.branchDetails.filter(x=>x.commits.some(xc=>xc.hash === c.hash));
+          if(branchesOfThisCommit.length === 1) continue;
+          for(let ob of branchesOfThisCommit){
+            if(ob.commits[ob.commits.length-1].hash === c.hash){
+              const allOtherBranches = branchesOfThisCommit.filter(x=>x.name !== ob.name);
+              allOtherBranches.forEach(alB=>{
+                if(alB.noDerivedCommits) return;
+                this.removeDerivedCommitsFromBranch(c,alB);
+              })
+            }
+          }
+        }
+      })
       this.sendRepoInfoToRenderer();
+    }
+
+    removeDerivedCommitsFromBranch=(lastCommit:ICommit,branch:BranchDetails)=>{
+      const index = branch.commits.findIndex(c=>c.hash === lastCommit.hash);
+      branch.commits = branch.commits.slice(0,index+1);
+      branch.noDerivedCommits = true;
     }
 
     sendRepoInfoToRenderer=()=>{
