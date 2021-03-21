@@ -11,13 +11,15 @@ import moment from "moment";
 export class GitManager{
 
   private git: SimpleGit = null!;
-  private repoInfo:IRepositoryInfo = {
+  private initialRepoInfoValue:IRepositoryInfo = {
     branchDetails:[],
     branchSummery:undefined!,
     commits:undefined!,
     lastReferencesByBranch:[],
     uniqueBrancNames:[],
+    remotes:[],
   };
+  private repoInfo:IRepositoryInfo = this.initialRepoInfoValue;
 
     constructor(){
       this.init()
@@ -30,6 +32,7 @@ export class GitManager{
     }
 
     configureRepo(repoPath:string){
+      this.repoInfo = this.initialRepoInfoValue;
       console.log(repoPath);
         // const repoPath = path.join(app.getPath('documents'),'workspace','joylist','joylist-webapp');
         const options: Partial<SimpleGitOptions> = {
@@ -61,7 +64,7 @@ export class GitManager{
     }
 
     setBranchSummery=()=>{
-      const branchCallback=(error:GitError,data:BranchSummary)=>{
+      const branchCallback=(_error:GitError,data:BranchSummary)=>{
         this.repoInfo.branchSummery = data;
         this.setUniqueBranchNames();
       }
@@ -69,12 +72,12 @@ export class GitManager{
     }
 
     setLogs=()=>{
-      const logCallBack=(_,data:LogResult<ICommit>)=>{
+      const logCallBack=(_e,data:LogResult<ICommit>)=>{
         this.repoInfo.commits = data;
         this.setBranchSummery();
         // mainWindow?.webContents.send(Main_Events.REPO_INFO,this.repoInfo);
       }
-      this.git.log(["--first-parent","--all"],logCallBack as any);
+      this.git.log(["--first-parent","--all","--max-count=200","--date=iso"],logCallBack as any);
     }
 
     setUniqueBranchNames=()=>{
@@ -93,11 +96,38 @@ export class GitManager{
         dateTime: new Date().toISOString(),
       }))
       this.repoInfo.lastReferencesByBranch.forEach(b=>{
-        const referencedCommits = this.repoInfo.commits.all.filter(c=>c.message.includes(`branch '${b.branchName}'`))
+        const referencedCommits = this.repoInfo.commits.all.filter(c=>!!c.message?.includes(`branch '${b.branchName}'`))
+        console.log("length:"+referencedCommits.length);
         referencedCommits.forEach(commit=>{
-            if(moment(commit.date).isBefore(b.dateTime) ) b.dateTime = commit.date;          
+            if(moment(commit.date).isBefore(b.dateTime) ) {
+              console.log('is before');
+              console.log(b);
+              console.log(commit);
+              b.dateTime = commit.date;
+            }          
         })
       })
+      this.setBranchDetails();
+    }
+
+    setBranchDetails=()=>{
+      this.repoInfo.branchSummery.all.forEach(b=>{
+        this.setCommitsOfBranch(b);
+      }) 
+    }
+
+    setCommitsOfBranch=(branchName:string)=>{
+      if(branchName.startsWith("remote/")) branchName = branchName.replace("remote/","");
+      const logCallBack=(_e,data:LogResult<ICommit>)=>{
+        this.repoInfo.branchDetails.push({
+          commits:[...data.all],
+          lastCommitsByRemotes:[],
+          name:branchName,
+        });
+        if(this.repoInfo.branchDetails.length === this.repoInfo.branchSummery.all.length) this.sendRepoInfoToRenderer();
+        // mainWindow?.webContents.send(Main_Events.REPO_INFO,this.repoInfo);
+      }
+      this.git.log(["--first-parent","--all","--max-count=100","--date=iso", branchName],logCallBack as any);
     }
 
     sendRepoInfoToRenderer=()=>{
