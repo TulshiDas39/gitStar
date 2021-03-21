@@ -1,5 +1,5 @@
 import { FileManager } from "./FileManager";
-import simpleGit, { BranchSummary, GitError, LogResult, SimpleGit, SimpleGitOptions } from 'simple-git';
+import simpleGit, { BranchSummary, GitError, LogResult, SimpleGit, SimpleGitOptions, SimpleGitTaskCallback } from 'simple-git';
 import path from "path";
 import { app, ipcMain } from "electron";
 import { mainWindow } from "../main.dev";
@@ -52,7 +52,8 @@ export class GitManager{
         //   }
         //   this.git.log(["--first-parent","--all"],logCallBack as any);
         // }
-        this.setLogs();
+        //this.setLogs();
+        this.setRemotes();
 
         // const branchCallback=(error:GitError,data:BranchSummary)=>{
         //   this.repoInfo.branchSummery = data;
@@ -61,6 +62,14 @@ export class GitManager{
         // this.git.branch(["-a"],branchCallback as any);
         // git.branch(["-a"],branchCallBack)
          //console.log(summery);
+    }
+
+    setRemotes=()=>{
+      const callBack=(_e,data:string)=>{
+        this.repoInfo.remotes = data.split('\n').filter(x=>!!x);
+        this.setLogs();
+      }
+      this.git.remote([],callBack as any)
     }
 
     setBranchSummery=()=>{
@@ -77,7 +86,7 @@ export class GitManager{
         this.setBranchSummery();
         // mainWindow?.webContents.send(Main_Events.REPO_INFO,this.repoInfo);
       }
-      this.git.log(["--first-parent","--all","--max-count=200","--date=iso"],logCallBack as any);
+      this.git.log(["--first-parent","--max-count=200","--date=iso"],logCallBack as any);
     }
 
     setUniqueBranchNames=()=>{
@@ -97,14 +106,8 @@ export class GitManager{
       }))
       this.repoInfo.lastReferencesByBranch.forEach(b=>{
         const referencedCommits = this.repoInfo.commits.all.filter(c=>!!c.message?.includes(`branch '${b.branchName}'`))
-        console.log("length:"+referencedCommits.length);
         referencedCommits.forEach(commit=>{
-            if(moment(commit.date).isBefore(b.dateTime) ) {
-              console.log('is before');
-              console.log(b);
-              console.log(commit);
-              b.dateTime = commit.date;
-            }          
+            if(moment(commit.date).isBefore(b.dateTime) ) b.dateTime = commit.date;
         })
       })
       this.setBranchDetails();
@@ -117,17 +120,38 @@ export class GitManager{
     }
 
     setCommitsOfBranch=(branchName:string)=>{
-      if(branchName.startsWith("remote/")) branchName = branchName.replace("remote/","");
+      // if(branchName.startsWith("remote/")) branchName = branchName.replace("remote/","");
       const logCallBack=(_e,data:LogResult<ICommit>)=>{
         this.repoInfo.branchDetails.push({
           commits:[...data.all],
           lastCommitsByRemotes:[],
           name:branchName,
         });
-        if(this.repoInfo.branchDetails.length === this.repoInfo.branchSummery.all.length) this.sendRepoInfoToRenderer();
+        if(this.repoInfo.branchDetails.length === this.repoInfo.branchSummery.all.length) this.normaliseCommits();
         // mainWindow?.webContents.send(Main_Events.REPO_INFO,this.repoInfo);
       }
-      this.git.log(["--first-parent","--all","--max-count=100","--date=iso", branchName],logCallBack as any);
+      this.git.log(["--first-parent","--max-count=100","--date=iso", branchName],logCallBack as any);
+    }
+
+    normaliseCommits=()=>{
+      this.repoInfo.uniqueBrancNames.forEach(name=>{
+        const branch = this.repoInfo.branchDetails.find(x=>x.name === name);
+        if(!branch) return;
+        branch.lastCommitsByRemotes.push({commit:branch.commits[0],remote:""});
+
+        this.repoInfo.remotes.forEach(r=>{
+          const remoteBranch = this.repoInfo.branchDetails.find(x=>x.name ===  "remotes/"+r+"/"+name);
+          if(!remoteBranch) return;
+
+          branch.lastCommitsByRemotes.push({
+            commit:remoteBranch.commits[0],
+            remote:r,
+          });
+
+          if(remoteBranch.commits.length > branch.commits.length) branch.commits = remoteBranch.commits;
+        })
+      })
+      this.sendRepoInfoToRenderer();
     }
 
     sendRepoInfoToRenderer=()=>{
