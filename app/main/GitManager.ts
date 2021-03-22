@@ -160,26 +160,40 @@ export class GitManager{
     removeDerivedCommits=()=>{
       this.repoInfo.branchDetails.forEach(b=>{
         if(b.noDerivedCommits) return;
-        const commitsFromSecond= b.commits.slice(1);
-        for(let c of commitsFromSecond){
-          const branchesOfThisCommit = this.repoInfo.branchDetails.filter(x=>x.commits.some(xc=>xc.hash === c.hash));
-          if(branchesOfThisCommit.length === 1) continue;
-          for(let ob of branchesOfThisCommit){
-            if(ob.commits[ob.commits.length-1].hash === c.hash){
-              const allOtherBranches = branchesOfThisCommit.filter(x=>x.name !== ob.name);
-              allOtherBranches.forEach(alB=>{
-                if(alB.noDerivedCommits) return;
-                this.removeDerivedCommitsFromBranch(c,alB);
-              })
-            }
-          }
-        }
+        this.removeDerivedComitsOfBranch(b);
       })
       this.sendRepoInfoToRenderer();
     }
+    
+    removeDerivedComitsOfBranch=(branch:BranchDetails)=>{
+      const commitsFromSecond= branch.commits.slice(1);
+      const branchesHavingDerivedCommit = this.repoInfo.branchDetails.filter(x=>!x.noDerivedCommits);
 
-    removeDerivedCommitsFromBranch=(lastCommit:ICommit,branch:BranchDetails)=>{
-      const index = branch.commits.findIndex(c=>c.hash === lastCommit.hash);
+        for(let c of commitsFromSecond){
+          if(branch.noDerivedCommits) break;
+          const branchesOfThisCommit = branchesHavingDerivedCommit.filter(x=>x.commits.some(xc=>xc.hash === c.hash));
+          if(branchesOfThisCommit.length === 1) continue;
+          for(let [index,ob] of branchesOfThisCommit.entries()){
+            if(this.isOwnerBranch(c,ob) || (index === branchesOfThisCommit.length-1)){
+              const allOtherBranches = branchesOfThisCommit.filter(x=>x.name !== ob.name);
+              allOtherBranches.forEach(alB=>{
+                this.setFirstCommitOfBranch(c,alB);
+              });
+              break;
+            }
+          }
+        }
+    }
+
+    isOwnerBranch=(commit:ICommit,branch:BranchDetails)=>{
+      if(branch.commits[0].hash === commit.hash) return true;
+      const lastReference = this.repoInfo.lastReferencesByBranch.find(b=>b.branchName === branch.name)?.dateTime!;
+      if(moment(lastReference).isBefore(commit.date)) return true;
+      return false;
+    }
+
+    setFirstCommitOfBranch=(firstCommit:ICommit,branch:BranchDetails)=>{
+      const index = branch.commits.findIndex(c=>c.hash === firstCommit.hash);
       branch.commits = branch.commits.slice(0,index+1);
       branch.noDerivedCommits = true;
     }
