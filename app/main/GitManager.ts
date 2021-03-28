@@ -124,20 +124,33 @@ export class GitManager{
     setCommitsOfBranch=(branchName:string)=>{
       // if(branchName.startsWith("remote/")) branchName = branchName.replace("remote/","");
       const lastCommitByRemote:ILastCommitByRemote[]=[];
+      const branchIncludingRemotes:string[]=[];
+
       const logCallBack=(_e,data:string)=>{
         console.log('branchName:'+branchName);
+        branchIncludingRemotes.forEach(b=>{
+          const splits = b.split('/');
+          let remote='';
+          if(splits.length>1) {
+            b='remotes/'+b;
+            remote=splits[0];
+          }
+          const summery = this.repoInfo.branchSummery.branches[b];
+          lastCommitByRemote.push({
+            commit: summery.commit,
+            remote:remote,
+          })
+        })
         this.repoInfo.branchDetails.push({
           commits:CommitParser.parseLog(data),
-          lastCommitsByRemotes:[],
+          lastCommitsByRemotes: lastCommitByRemote,
           name:branchName,
           noDerivedCommits:false,
         });
-
         
         if(this.repoInfo.branchDetails.length === this.repoInfo.uniqueBrancNames.length) this.sendRepoInfoToRenderer();//this.removeDerivedCommits();
         // mainWindow?.webContents.send(Main_Events.REPO_INFO,this.repoInfo);
       }
-      const branchIncludingRemotes:string[]=[];
       if(this.repoInfo.branchSummery.all.includes(branchName)){
         branchIncludingRemotes.push(branchName);    
       }

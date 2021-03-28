@@ -24,7 +24,7 @@ export interface IRepositoryInfo{
 
 export interface ILastCommitByRemote{
   remote:string;
-  commit:ICommit;
+  commit:string;
 }
 
 export interface ILastReference{
