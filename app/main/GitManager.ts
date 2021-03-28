@@ -1,11 +1,12 @@
 import { FileManager } from "./FileManager";
-import simpleGit, { BranchSummary, GitError, LogResult, SimpleGit, SimpleGitOptions, SimpleGitTaskCallback } from 'simple-git';
+import simpleGit, { BranchSummary, GitError, LogResult, SimpleGit, SimpleGitOptions } from 'simple-git';
 import path from "path";
 import { app, ipcMain } from "electron";
 import { mainWindow } from "../main.dev";
 import { Main_Events, Renderer_Events } from "../constants/constants";
-import { BranchDetails, ICommit, IRepository, IRepositoryInfo } from "../lib";
+import { BranchDetails, ICommit, ILastCommitByRemote, IRepository, IRepositoryInfo } from "../lib";
 import moment from "moment";
+import { CommitParser } from "../lib/utils/CommitParser";
 
 
 export class GitManager{
@@ -18,6 +19,7 @@ export class GitManager{
     lastReferencesByBranch:[],
     uniqueBrancNames:[],
     remotes:[],
+    branchTree:[],
   };
   private repoInfo:IRepositoryInfo = this.initialRepoInfoValue;
 
@@ -114,24 +116,36 @@ export class GitManager{
     }
 
     setBranchDetails=()=>{
-      this.repoInfo.branchSummery.all.forEach(b=>{
+      this.repoInfo.uniqueBrancNames.forEach(b=>{
         this.setCommitsOfBranch(b);
-      }) 
+      });
     }
 
     setCommitsOfBranch=(branchName:string)=>{
       // if(branchName.startsWith("remote/")) branchName = branchName.replace("remote/","");
-      const logCallBack=(_e,data:LogResult<ICommit>)=>{
+      const lastCommitByRemote:ILastCommitByRemote[]=[];
+      const logCallBack=(_e,data:string)=>{
+        console.log('branchName:'+branchName);
         this.repoInfo.branchDetails.push({
-          commits:[...data.all],
+          commits:CommitParser.parseLog(data),
           lastCommitsByRemotes:[],
           name:branchName,
           noDerivedCommits:false,
         });
-        if(this.repoInfo.branchDetails.length === this.repoInfo.branchSummery.all.length) this.normaliseCommits();
+
+        
+        if(this.repoInfo.branchDetails.length === this.repoInfo.uniqueBrancNames.length) this.sendRepoInfoToRenderer();//this.removeDerivedCommits();
         // mainWindow?.webContents.send(Main_Events.REPO_INFO,this.repoInfo);
       }
-      this.git.log(["--first-parent","--max-count=100","--date=iso", branchName],logCallBack as any);
+      const branchIncludingRemotes:string[]=[];
+      if(this.repoInfo.branchSummery.all.includes(branchName)){
+        branchIncludingRemotes.push(branchName);    
+      }
+      this.repoInfo.remotes.forEach(r=>{
+        const remoteBranch = r+'/'+branchName;
+        if(this.repoInfo.branchSummery.all.includes("remotes/"+remoteBranch)) branchIncludingRemotes.push(remoteBranch);
+      })
+      this.git.raw(["log","--first-parent","--abbrev-commit","--max-count=100","--date=iso", ...branchIncludingRemotes],logCallBack as any);
     }
 
     normaliseCommits=()=>{
@@ -158,10 +172,12 @@ export class GitManager{
     }
 
     removeDerivedCommits=()=>{
+      console.log('removing derived commits');
       this.repoInfo.branchDetails.forEach(b=>{
         if(b.noDerivedCommits) return;
         this.removeDerivedComitsOfBranch(b);
       })
+      console.log('sending to renderer');
       this.sendRepoInfoToRenderer();
     }
     
@@ -169,10 +185,13 @@ export class GitManager{
       const commitsFromSecond= branch.commits.slice(1);
       const branchesHavingDerivedCommit = this.repoInfo.branchDetails.filter(x=>!x.noDerivedCommits);
 
-        for(let c of commitsFromSecond){
+        for(let [indexC,c] of commitsFromSecond.entries()){
           if(branch.noDerivedCommits) break;
           const branchesOfThisCommit = branchesHavingDerivedCommit.filter(x=>x.commits.some(xc=>xc.hash === c.hash));
-          if(branchesOfThisCommit.length === 1) continue;
+          if(branchesOfThisCommit.length === 1) {    
+            if(indexC === commitsFromSecond.length-1)this.repoInfo.branchTree.push(branch);
+            continue;
+          };
           for(let [index,ob] of branchesOfThisCommit.entries()){
             if(this.isOwnerBranch(c,ob) || (index === branchesOfThisCommit.length-1)){
               const allOtherBranches = branchesOfThisCommit.filter(x=>x.name !== ob.name);
@@ -189,12 +208,16 @@ export class GitManager{
       if(branch.commits[0].hash === commit.hash) return true;
       const lastReference = this.repoInfo.lastReferencesByBranch.find(b=>b.branchName === branch.name)?.dateTime!;
       if(moment(lastReference).isBefore(commit.date)) return true;
+      if(branch.name === 'master') return true;
+      if(branch.name === 'main') return true;      
       return false;
     }
 
     setFirstCommitOfBranch=(firstCommit:ICommit,branch:BranchDetails)=>{
       const index = branch.commits.findIndex(c=>c.hash === firstCommit.hash);
-      branch.commits = branch.commits.slice(0,index+1);
+      branch.commits = branch.commits.slice(0,index);
+      if(!!firstCommit.branchesFromThis?.length) firstCommit.branchesFromThis.push(branch);
+      else firstCommit.branchesFromThis = [branch];
       branch.noDerivedCommits = true;
     }
 
@@ -238,3 +261,4 @@ export class GitManager{
   
   }
   
+  //017

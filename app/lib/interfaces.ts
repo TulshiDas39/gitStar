@@ -3,6 +3,8 @@ import { IStore } from "../store";
 
 export interface ICommit extends DefaultLogFields{
   avrebHash:string;
+  branchesFromThis?:BranchDetails[];
+  mergeInfo?:string[];
 }
 
 export interface IRepository{
@@ -14,6 +16,7 @@ export interface IRepositoryInfo{
   branchSummery:BranchSummary;
   commits:LogResult<ICommit>;
   branchDetails:BranchDetails[];
+  branchTree:BranchDetails[];
   uniqueBrancNames:string[];
   lastReferencesByBranch: ILastReference[];
   remotes:string[];
