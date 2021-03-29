@@ -22,27 +22,42 @@ export class CommitParser{
         else if(line.startsWith('Date:')){
             commit.date = line.replace("Date:","").trim();
         }
+        else if(line.startsWith('    ')) {
+            commit.message = line.trim();
+        }
     }
 
     private static getCommit(lines:string[],indexObj:{index:number}){
         const commit = {} as ICommit;
-        for(let line of lines){
-            if(line.startsWith('    ')) {
-                commit.message = line.trim();
+        while(true){
+            if(indexObj.index >= lines.length) return commit;
+            //console.log(indexObj.index);            
+            const line = lines[indexObj.index];
+            //console.log(line);
+            if(!line) {
+                indexObj.index++
+                continue;
+            }
+            if(!!commit.hash && line.startsWith('commit ')){
+                indexObj.index--;
                 return commit;
             }
+            
             this.addCommitField(line,commit);
-            indexObj.index++;
+            indexObj.index++
         }
     }
     static parseLog(str:string){
         const lines:string[]= str.split('\n');
         const commits:ICommit[]=[];
         let indexObj = {index:0};
-        while(indexObj.index <= lines.length){
+
+        while(indexObj.index < lines.length){
             const commit:ICommit = this.getCommit(lines,indexObj)!;
+            //console.log(commit.hash);
             commits.push(commit);
             indexObj.index++;
+            //console.log("index", indexObj.index);
         }
 
         return commits;

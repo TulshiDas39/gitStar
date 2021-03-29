@@ -147,8 +147,16 @@ export class GitManager{
           name:branchName,
           noDerivedCommits:false,
         });
+        //Layout-Refactoring-V2
+        if(branchName === 'Layout-Refactoring-V2'){
+          (this.repoInfo as any).test = branchIncludingRemotes;
+          (this.repoInfo as any).test2 = data;
+          (this.repoInfo as any).test3 = data.split('\n');
+          this.sendRepoInfoToRenderer();
+
+        }
         
-        if(this.repoInfo.branchDetails.length === this.repoInfo.uniqueBrancNames.length) this.sendRepoInfoToRenderer();//this.removeDerivedCommits();
+        if(this.repoInfo.branchDetails.length === this.repoInfo.uniqueBrancNames.length) this.sendRepoInfoToRenderer(); //this.removeDerivedCommits();
         // mainWindow?.webContents.send(Main_Events.REPO_INFO,this.repoInfo);
       }
       if(this.repoInfo.branchSummery.all.includes(branchName)){
