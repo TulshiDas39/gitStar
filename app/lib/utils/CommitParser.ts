@@ -15,7 +15,7 @@ export class CommitParser{
 
         else if(line.startsWith(LogFields.Parent_Hashes)){
             const ids = line.replace(LogFields.Parent_Hashes+":",'');
-            commit.mergeInfo = Utils.getWords(ids);
+            commit.parentHashes = Utils.getWords(ids);
         }
         else if(line.startsWith(LogFields.Author_Name)){
             commit.author_name = line.replace(LogFields.Author_Name+":","");

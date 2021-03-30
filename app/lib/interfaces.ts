@@ -4,7 +4,7 @@ import { IStore } from "../store";
 export interface ICommit extends DefaultLogFields{
   avrebHash:string;
   branchesFromThis?:BranchDetails[];
-  mergeInfo?:string[];
+  parentHashes:string[];
 }
 
 export interface IRepository{

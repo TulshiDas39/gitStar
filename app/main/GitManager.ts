@@ -4,7 +4,7 @@ import path from "path";
 import { app, ipcMain } from "electron";
 import { mainWindow } from "../main.dev";
 import { Main_Events, Renderer_Events } from "../constants/constants";
-import { BranchDetails, ICommit, ILastCommitByRemote, IRepository, IRepositoryInfo } from "../lib";
+import { BranchDetails, ICommit, ILastCommitByRemote, ILastReference, IRepository, IRepositoryInfo } from "../lib";
 import moment from "moment";
 import { CommitParser } from "../lib/utils/CommitParser";
 import { LogFormat } from "./commands";
@@ -100,22 +100,40 @@ export class GitManager{
         if(!!name && !uniqueBranchNames.includes(name))uniqueBranchNames.push(name);
       })
       this.repoInfo.uniqueBrancNames = uniqueBranchNames;
-      this.setLastReferencesOfBranches();
+      this.setBranchDetails();
+      // this.setLastReferencesOfBranches();
     }
 
-    setLastReferencesOfBranches=()=>{      
-      this.repoInfo.lastReferencesByBranch = this.repoInfo.uniqueBrancNames.map(name=>({
-        branchName:name,
-        dateTime: new Date().toISOString(),
-      }))
-      this.repoInfo.lastReferencesByBranch.forEach(b=>{
-        const referencedCommits = this.repoInfo.allCommits.filter(c=>!!c.message?.includes(`branch '${b.branchName}'`))
-        referencedCommits.forEach(commit=>{
-            if(moment(commit.date).isBefore(b.dateTime) ) b.dateTime = commit.date;
-        })
+    getFirstReferenceDateByBranch=(branchName:string)=>{
+      const branch = this.repoInfo.lastReferencesByBranch.find(x=>x.branchName === branchName);
+      if(branch) return branch.dateTime;
+    
+      let firstReferenceDate = new Date().toISOString();
+      const referencedCommits = this.repoInfo.allCommits.filter(c=>!!c.message?.includes(`branch '${branchName}'`));
+      referencedCommits.forEach(commit=>{
+          if(moment(commit.date).isBefore(firstReferenceDate) ) firstReferenceDate = commit.date;
+      });
+      this.repoInfo.lastReferencesByBranch.push({
+        branchName:branchName,
+        dateTime:firstReferenceDate,
       })
-      this.setBranchDetails();
+      return firstReferenceDate;      
+
     }
+
+    // setLastReferencesOfBranches=()=>{      
+    //   this.repoInfo.lastReferencesByBranch = this.repoInfo.uniqueBrancNames.map(name=>({
+    //     branchName:name,
+    //     dateTime: new Date().toISOString(),
+    //   }))
+    //   this.repoInfo.lastReferencesByBranch.forEach(b=>{
+    //     const referencedCommits = this.repoInfo.allCommits.filter(c=>!!c.message?.includes(`branch '${b.branchName}'`))
+    //     referencedCommits.forEach(commit=>{
+    //         if(moment(commit.date).isBefore(b.dateTime) ) b.dateTime = commit.date;
+    //     })
+    //   })
+    //   this.setBranchDetails();
+    // }
 
     setBranchDetails=()=>{
       this.repoInfo.uniqueBrancNames.forEach(b=>{
