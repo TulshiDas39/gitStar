@@ -33,3 +33,13 @@ export const Constants={
   URL_PREFIX:"https://www.youtube.com/watch?v=",
 }
 
+export enum LogFields{
+  Hash="Hash",
+  Abbrev_Hash="Abbrev_Hash",
+  Parent_Hashes="Parent_Hashes",
+  Author_Name="Author_Name",
+  Author_Email="Author_Email",
+  Date="Date",
+  Ref="Ref",
+  Message="Message",
+}

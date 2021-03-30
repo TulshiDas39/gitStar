@@ -15,6 +15,7 @@ export interface IRepository{
 export interface IRepositoryInfo{
   branchSummery:BranchSummary;
   commits:LogResult<ICommit>;
+  allCommits:ICommit[];
   branchDetails:BranchDetails[];
   branchTree:BranchDetails[];
   uniqueBrancNames:string[];

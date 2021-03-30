@@ -7,12 +7,14 @@ import { Main_Events, Renderer_Events } from "../constants/constants";
 import { BranchDetails, ICommit, ILastCommitByRemote, IRepository, IRepositoryInfo } from "../lib";
 import moment from "moment";
 import { CommitParser } from "../lib/utils/CommitParser";
+import { LogFormat } from "./commands";
 
 
 export class GitManager{
 
   private git: SimpleGit = null!;
   private initialRepoInfoValue:IRepositoryInfo = {
+    allCommits:[],
     branchDetails:[],
     branchSummery:undefined!,
     commits:undefined!,
@@ -83,12 +85,12 @@ export class GitManager{
     }
 
     setLogs=()=>{
-      const logCallBack=(_e,data:LogResult<ICommit>)=>{
-        this.repoInfo.commits = data;
+      const logCallBack=(_e,data:string)=>{
+        this.repoInfo.allCommits = CommitParser.parseLog(data);
         this.setBranchSummery();
         // mainWindow?.webContents.send(Main_Events.REPO_INFO,this.repoInfo);
       }
-      this.git.log(["--first-parent","--max-count=200","--date=iso"],logCallBack as any);
+      this.git.raw(["log", "--all","--max-count=500","--date=iso", LogFormat],logCallBack as any);
     }
 
     setUniqueBranchNames=()=>{
@@ -107,7 +109,7 @@ export class GitManager{
         dateTime: new Date().toISOString(),
       }))
       this.repoInfo.lastReferencesByBranch.forEach(b=>{
-        const referencedCommits = this.repoInfo.commits.all.filter(c=>!!c.message?.includes(`branch '${b.branchName}'`))
+        const referencedCommits = this.repoInfo.allCommits.filter(c=>!!c.message?.includes(`branch '${b.branchName}'`))
         referencedCommits.forEach(commit=>{
             if(moment(commit.date).isBefore(b.dateTime) ) b.dateTime = commit.date;
         })
@@ -166,7 +168,7 @@ export class GitManager{
         const remoteBranch = r+'/'+branchName;
         if(this.repoInfo.branchSummery.all.includes("remotes/"+remoteBranch)) branchIncludingRemotes.push(remoteBranch);
       })
-      this.git.raw(["log","--first-parent","--abbrev-commit","--max-count=100","--date=iso", ...branchIncludingRemotes],logCallBack as any);
+      this.git.raw(["log","--first-parent","--max-count=100","--date=iso",LogFormat, ...branchIncludingRemotes],logCallBack as any);
     }
 
     normaliseCommits=()=>{

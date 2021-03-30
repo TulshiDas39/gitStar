@@ -1,3 +1,4 @@
+import { LogFields } from "../../constants/constants";
 import { ICommit } from "../interfaces";
 import { Utils } from "./Utils";
 
@@ -5,25 +6,28 @@ export class CommitParser{
 
 
     private static addCommitField(line:string,commit:ICommit){
-        if(line.startsWith('commit ')) {
-            commit.hash = Utils.getWords(line)[1];
-            commit.avrebHash = commit.hash;
+        if(line.startsWith(LogFields.Hash)) {
+            commit.hash = line.replace(LogFields.Hash+":","");
         }
-        else if(line.startsWith('Merge:')){
-            const ids = line.replace('Merge:','');
+        if(line.startsWith(LogFields.Abbrev_Hash)) {
+            commit.avrebHash = line.replace(LogFields.Abbrev_Hash+":","");
+        }
+
+        else if(line.startsWith(LogFields.Parent_Hashes)){
+            const ids = line.replace(LogFields.Parent_Hashes+":",'');
             commit.mergeInfo = Utils.getWords(ids);
         }
-        else if(line.startsWith('Author:')){
-            const author = line.replace("Author:","");
-            const strs = Utils.getWords(author);
-            commit.author_email = strs.pop()?.replace(/[<,>]/g,"")!;
-            commit.author_name = strs.join(' ');
+        else if(line.startsWith(LogFields.Author_Name)){
+            commit.author_name = line.replace(LogFields.Author_Name+":","");
         }
-        else if(line.startsWith('Date:')){
-            commit.date = line.replace("Date:","").trim();
+        else if(line.startsWith(LogFields.Author_Email)){
+            commit.author_email = line.replace(LogFields.Author_Email+":","");
         }
-        else if(line.startsWith('    ')) {
-            commit.message = line.trim();
+        else if(line.startsWith(LogFields.Date)){
+            commit.date = line.replace(LogFields.Date+":","").trim();
+        }
+        else if(line.startsWith(LogFields.Message)) {
+            commit.message = line.replace(LogFields.Message+":","");
         }
     }
 
@@ -38,7 +42,7 @@ export class CommitParser{
                 indexObj.index++
                 continue;
             }
-            if(!!commit.hash && line.startsWith('commit ')){
+            if(!!commit.hash && line.startsWith(LogFields.Hash)){
                 indexObj.index--;
                 return commit;
             }
