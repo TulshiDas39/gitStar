@@ -4,14 +4,16 @@ import path from "path";
 import { app, ipcMain } from "electron";
 import { mainWindow } from "../main.dev";
 import { Main_Events, Renderer_Events } from "../constants/constants";
-import { BranchDetails, ICommit, ILastCommitByRemote, ILastReference, IRepository, IRepositoryInfo } from "../lib";
+import { BranchDetails, ICommit, ILastCommitByRemote, ILastReference, IRepository, IRepositoryInfo, IResolvedBranch } from "../lib";
 import moment from "moment";
 import { CommitParser } from "../lib/utils/CommitParser";
 import { LogFormat } from "./commands";
 
-
+//HEAD ->
+//"tag: v1.0.0, fb_video_download, a"
+export const headPrefix = 'HEAD ->';
 export class GitManager{
-
+  
   private git: SimpleGit = null!;
   private initialRepoInfoValue:IRepositoryInfo = {
     allCommits:[],
@@ -22,8 +24,12 @@ export class GitManager{
     uniqueBrancNames:[],
     remotes:[],
     branchTree:[],
+    resolvedBranches:[],
+    headCommit:undefined!,
   };
   private repoInfo:IRepositoryInfo = this.initialRepoInfoValue;
+  private limit = 500;
+  private skip = 0
 
     constructor(){
       this.init()
@@ -58,6 +64,8 @@ export class GitManager{
         // }
         //this.setLogs();
         this.setRemotes();
+        this.setBranchSummery();
+
 
         // const branchCallback=(error:GitError,data:BranchSummary)=>{
         //   this.repoInfo.branchSummery = data;
@@ -86,11 +94,70 @@ export class GitManager{
 
     setLogs=()=>{
       const logCallBack=(_e,data:string)=>{
-        this.repoInfo.allCommits = CommitParser.parseLog(data);
-        this.setBranchSummery();
+        const commits = CommitParser.parseLog(data);
+        this.repoInfo.allCommits.push(...commits);
+        this.setResolvedBranch(commits);
+        this.sendRepoInfoToRenderer();
         // mainWindow?.webContents.send(Main_Events.REPO_INFO,this.repoInfo);
       }
-      this.git.raw(["log", "--all","--max-count=500","--date=iso", LogFormat],logCallBack as any);
+      this.git.raw(["log", "--all",`--max-count=${this.limit}`,`--skip=${this.skip*this.limit}`,"--date=iso", LogFormat],logCallBack as any);
+    }
+
+    setResolvedBranch=(commits:ICommit[])=>{
+      for(let commit of commits){
+        const branches = this.getBranchFromReference(commit.refs);
+        if(commit.message.includes(`branch '`)){
+          const referencedBranch = this.repoInfo.resolvedBranches.find(x=>commit.message.includes(`branch '${x.name}'`));
+          if(referencedBranch){
+            referencedBranch.lastReferenceDate = commit.date;
+          }
+        }
+        if(!branches?.length) continue;
+        branches.forEach(b=>{
+          b = b.trim();
+          if(b.startsWith(headPrefix)) {
+            this.repoInfo.headCommit = commit;
+            b = b.replace(headPrefix,"").trim();
+          }
+          let branchName = "";
+          let remote = "";
+          let splits = b.split("/");
+          if(splits.length>1){
+            branchName = splits[1];
+            remote = splits[0];           
+          }
+          else {
+            branchName=b;
+          }
+          let resolvedBranch = this.repoInfo.resolvedBranches.find(x=>x.name === branchName)!;
+          if(!resolvedBranch) {
+            resolvedBranch = {
+              lastReferenceDate:commit.date,
+              lastCommitByRemote:[],
+              firstCommitHash:"",
+              name:branchName,
+            } as IResolvedBranch;
+            this.repoInfo.resolvedBranches.push(resolvedBranch);
+          }
+          resolvedBranch.lastCommitByRemote.push({
+            commitHash:commit.hash,
+            remote:remote,
+          });
+
+        })
+      }
+    }
+
+    getBranchFromReference=(commitRef:string)=>{
+      const splits = commitRef.split(",");
+      if(!splits.length) return undefined;
+      const branches:string[] = [];
+      splits.forEach(spt=>{
+        spt = spt.trim();
+        if(spt.startsWith('tag:'))return;
+        branches.push(spt);
+      });
+      return branches;      
     }
 
     setUniqueBranchNames=()=>{
@@ -100,7 +167,7 @@ export class GitManager{
         if(!!name && !uniqueBranchNames.includes(name))uniqueBranchNames.push(name);
       })
       this.repoInfo.uniqueBrancNames = uniqueBranchNames;
-      this.setBranchDetails();
+      //this.setBranchDetails();
       // this.setLastReferencesOfBranches();
     }
 
@@ -157,7 +224,7 @@ export class GitManager{
           }
           const summery = this.repoInfo.branchSummery.branches[b];
           lastCommitByRemote.push({
-            commit: summery.commit,
+            commitHash: summery.commit,
             remote:remote,
           })
         })
@@ -193,7 +260,7 @@ export class GitManager{
       this.repoInfo.uniqueBrancNames.forEach(name=>{
         const branch = this.repoInfo.branchDetails.find(x=>x.name === name);
         if(!branch) return;
-        branch.lastCommitsByRemotes.push({commit:branch.commits[0],remote:""});
+        branch.lastCommitsByRemotes.push({commitHash:branch.commits[0],remote:""});
 
         this.repoInfo.remotes.forEach(r=>{
           const remoteBranchName = "remotes/"+r+"/"+name;
@@ -201,7 +268,7 @@ export class GitManager{
           if(!remoteBranch) return;
 
           branch.lastCommitsByRemotes.push({
-            commit:remoteBranch.commits[0],
+            commitHash:remoteBranch.commits[0],
             remote:r,
           });
 
@@ -288,6 +355,10 @@ export class GitManager{
             {
               name: 'P1stonUIRepo',
               path: path.join(app.getPath('documents'),'workspace','piston','P1stonUIRepo'),
+            },
+            {
+              name:'Downloader',
+              path:path.join(app.getPath('documents'),'workspace','projects','downloader')
             }
           ];
           mainWindow?.webContents.send(Main_Events.ALL_REPOSITORIES,repositoryList);

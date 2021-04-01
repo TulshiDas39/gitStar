@@ -29,6 +29,9 @@ export class CommitParser{
         else if(line.startsWith(LogFields.Message)) {
             commit.message = line.replace(LogFields.Message+":","");
         }
+        else if(line.startsWith(LogFields.Ref)){
+            commit.refs =line.replace(LogFields.Ref+":","");
+        }
     }
 
     private static getCommit(lines:string[],indexObj:{index:number}){

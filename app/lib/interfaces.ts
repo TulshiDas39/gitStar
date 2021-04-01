@@ -21,11 +21,20 @@ export interface IRepositoryInfo{
   uniqueBrancNames:string[];
   lastReferencesByBranch: ILastReference[];
   remotes:string[];
+  resolvedBranches:IResolvedBranch[];
+  headCommit:ICommit;
+}
+
+export interface IResolvedBranch{
+  name:string;
+  lastCommitByRemote:ILastCommitByRemote[];
+  firstCommitHash:string;
+  lastReferenceDate:string;
 }
 
 export interface ILastCommitByRemote{
   remote:string;
-  commit:string;
+  commitHash:string;
 }
 
 export interface ILastReference{
