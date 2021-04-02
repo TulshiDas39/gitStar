@@ -105,20 +105,14 @@ export class GitManager{
 
     setResolvedBranch=(commits:ICommit[])=>{
       for(let commit of commits){
+        this.setReference(commit);
+
         const branches = this.getBranchFromReference(commit.refs);
-        if(commit.message.includes(`branch '`)){
-          const referencedBranch = this.repoInfo.resolvedBranches.find(x=>commit.message.includes(`branch '${x.name}'`));
-          if(referencedBranch){
-            referencedBranch.lastReferenceDate = commit.date;
-          }
-        }
+
         if(!branches?.length) continue;
         branches.forEach(b=>{
           b = b.trim();
-          if(b.startsWith(headPrefix)) {
-            this.repoInfo.headCommit = commit;
-            b = b.replace(headPrefix,"").trim();
-          }
+          b = this.setHeadCommit(b, commit);
           let branchName = "";
           let remote = "";
           let splits = b.split("/");
@@ -145,6 +139,23 @@ export class GitManager{
           });
 
         })
+      }
+    }
+
+  private setHeadCommit(b: string, commit: ICommit) {
+    if (b.startsWith(headPrefix)) {
+      this.repoInfo.headCommit = commit;
+      b = b.replace(headPrefix, "").trim();
+    }
+    return b;
+  }
+
+    private setReference(commit: ICommit) {
+      if (commit.message.includes(`branch '`)) {
+        const referencedBranch = this.repoInfo.resolvedBranches.find(x => commit.message.includes(`branch '${x.name}'`));
+        if (referencedBranch) {
+          referencedBranch.lastReferenceDate = commit.date;
+        }
       }
     }
 
@@ -364,6 +375,8 @@ export class GitManager{
           mainWindow?.webContents.send(Main_Events.ALL_REPOSITORIES,repositoryList);
       })
     }
+
+
 
     handleRendererEvents(){
       // this.handleGetCommitList();
