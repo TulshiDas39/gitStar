@@ -5,6 +5,9 @@ export interface ICommit extends DefaultLogFields{
   avrebHash:string;
   branchesFromThis?:BranchDetails[];
   parentHashes:string[];
+  ownerBranch?:BranchDetails;
+  referedBranches?:string[];
+  branchNameWithRemotes?:IBranchRemote[];
 }
 
 export interface IRepository{
@@ -23,6 +26,7 @@ export interface IRepositoryInfo{
   remotes:string[];
   resolvedBranches:IResolvedBranch[];
   headCommit:ICommit;
+  mergeCommitMessages:string[];
 }
 
 export interface IResolvedBranch{
@@ -30,6 +34,8 @@ export interface IResolvedBranch{
   lastCommitByRemote:ILastCommitByRemote[];
   firstCommitHash:string;
   lastReferenceDate:string;
+  commits:ICommit[];
+  latestCommit:ICommit;
 }
 
 export interface ILastCommitByRemote{
@@ -38,7 +44,7 @@ export interface ILastCommitByRemote{
 }
 
 export interface ILastReference{
-  branchName:string;
+  message:string;
   dateTime:string;
 }
 
@@ -49,4 +55,9 @@ export interface BranchDetails{
   commits:ICommit[];
   lastCommitsByRemotes:ILastCommitByRemote[];
   noDerivedCommits:boolean;
+}
+
+export interface IBranchRemote{
+  branchName:string;
+  remote:string;
 }

@@ -4,7 +4,7 @@ import path from "path";
 import { app, ipcMain } from "electron";
 import { mainWindow } from "../main.dev";
 import { Main_Events, Renderer_Events } from "../constants/constants";
-import { BranchDetails, ICommit, ILastCommitByRemote, ILastReference, IRepository, IRepositoryInfo, IResolvedBranch } from "../lib";
+import { BranchDetails, IBranchRemote, ICommit, ILastCommitByRemote, ILastReference, IRepository, IRepositoryInfo, IResolvedBranch } from "../lib";
 import moment from "moment";
 import { CommitParser } from "../lib/utils/CommitParser";
 import { LogFormat } from "./commands";
@@ -26,6 +26,7 @@ export class GitManager{
     branchTree:[],
     resolvedBranches:[],
     headCommit:undefined!,
+    mergeCommitMessages:[],
   };
   private repoInfo:IRepositoryInfo = this.initialRepoInfoValue;
   private limit = 500;
@@ -113,33 +114,114 @@ export class GitManager{
         branches.forEach(b=>{
           b = b.trim();
           b = this.setHeadCommit(b, commit);
-          let branchName = "";
-          let remote = "";
-          let splits = b.split("/");
-          if(splits.length>1){
-            branchName = splits[1];
-            remote = splits[0];           
-          }
-          else {
-            branchName=b;
-          }
-          let resolvedBranch = this.repoInfo.resolvedBranches.find(x=>x.name === branchName)!;
+          const branchRemote = this.getBranchRemote(b);         
+          let resolvedBranch = this.repoInfo.resolvedBranches.find(x=>x.name === branchRemote.branchName)!;
           if(!resolvedBranch) {
             resolvedBranch = {
               lastReferenceDate:commit.date,
               lastCommitByRemote:[],
               firstCommitHash:"",
-              name:branchName,
+              name:branchRemote.branchName,
+              commits:[],
+              latestCommit:commit
             } as IResolvedBranch;
             this.repoInfo.resolvedBranches.push(resolvedBranch);
+          }else{
+            if(moment(commit.date).isBefore(resolvedBranch.latestCommit.date)) resolvedBranch.latestCommit = commit;
           }
           resolvedBranch.lastCommitByRemote.push({
             commitHash:commit.hash,
-            remote:remote,
+            remote:branchRemote.remote,
           });
 
         })
       }
+      this.createTree();
+    }
+    createTree=()=>{
+      const commits = this.repoInfo.allCommits.slice();
+      const tree:BranchDetails[] = [];
+      for(let i=commits.length-1;i>=0;i--){
+        const currentCommit = commits[i];
+        currentCommit.referedBranches = this.getBranchFromReference(currentCommit.refs);
+        currentCommit.branchNameWithRemotes = currentCommit.referedBranches?.map(x=>this.getBranchRemote(x));
+   
+        let parentCommit:ICommit = null!;
+        let parentBranch:BranchDetails=null!;
+        for(let b of tree){
+          let pCommit  = b.commits.find(x=>x.avrebHash === currentCommit.parentHashes[0]);
+          if(pCommit) {
+            parentCommit = pCommit;
+            parentBranch = b;
+            break;
+          }
+        }
+        if(!parentBranch){
+          parentBranch ={
+            commits:[currentCommit],
+            lastCommitsByRemotes:[],
+            name:"",
+            noDerivedCommits:false,
+          }
+          tree.push(parentBranch);
+        }
+
+        if(currentCommit.branchNameWithRemotes?.length){
+          if(!parentBranch.name){
+            let parentBranchName = currentCommit.branchNameWithRemotes.find(x=>!!x.remote)?.branchName;
+            // if(!parentBranchName) parentBranchName = currentCommit.branchNameWithRemotes[0].branchName;
+            if(parentBranchName) parentBranch.name = parentBranchName;
+          }
+          if(currentCommit.branchNameWithRemotes.some(x=> x.branchName === parentBranch.name)){
+            currentCommit.branchNameWithRemotes.forEach(r=>{
+              if(r.branchName === parentBranch.name) parentBranch.lastCommitsByRemotes.push({
+                commitHash:currentCommit.hash,
+                remote:r.remote,              
+              })
+            })
+          } 
+                    
+        }
+
+
+        if(!!parentCommit && !!parentBranch){
+          let index = parentBranch.commits.findIndex(x=>x.hash === parentCommit.hash);
+
+          if(index === 0 && !parentCommit.branchesFromThis?.length && parentCommit.){
+             parentBranch.commits = [commits[i], ...parentBranch.commits];
+          }
+          else{
+            if(!parentCommit.branchesFromThis?.length) parentCommit.branchesFromThis = [];
+            let newBranch:BranchDetails={
+              name:"",
+              commits:[parentCommit,commits[i]],
+              lastCommitsByRemotes:[],
+              noDerivedCommits:false,
+            }
+            parentCommit.branchesFromThis.push(newBranch);
+            if(index !== 0 && parentCommit.branchesFromThis.length ==1) {
+              parentCommit.branchesFromThis.push(
+                {
+                  name:"",
+                  commits:[...parentBranch.commits.splice(0,index+1)],
+                  lastCommitsByRemotes:[],
+                  noDerivedCommits:false,
+                }                
+              )              
+            }
+          }
+        }
+
+      }      
+    }
+
+    getChildCommits=(commit:ICommit)=>{
+      this.repoInfo.allCommits.find(x=>)
+    }
+
+    getBranch=(commit:ICommit,tree:IResolvedBranch[])=>{
+      const branch = tree.find(tr=> tr.commits[0].avrebHash === commit.parentHashes[0]);
+      
     }
 
   private setHeadCommit(b: string, commit: ICommit) {
@@ -150,13 +232,11 @@ export class GitManager{
     return b;
   }
 
-    private setReference(commit: ICommit) {
-      if (commit.message.includes(`branch '`)) {
-        const referencedBranch = this.repoInfo.resolvedBranches.find(x => commit.message.includes(`branch '${x.name}'`));
-        if (referencedBranch) {
-          referencedBranch.lastReferenceDate = commit.date;
-        }
-      }
+    private setReference(commit: ICommit) {    
+      if(commit.message?.includes(`branch '`) ) this.repoInfo.lastReferencesByBranch.push({
+        message:commit.message,
+        dateTime:commit.date
+      })      
     }
 
     getBranchFromReference=(commitRef:string)=>{
@@ -171,6 +251,47 @@ export class GitManager{
       return branches;      
     }
 
+ 
+
+    resolveCommitsOfBranch=(resolvedBranch:IResolvedBranch)=>{
+      resolvedBranch.commits = [];
+      let commit = resolvedBranch.latestCommit;
+      resolvedBranch.commits.push(commit);
+      while(true){
+        
+      }
+      // const currentCommit = this.repoInfo.allCommits.find(x=>x.hash === resolvedBranch.la)
+    }
+
+    getReferedBranch=(commit:ICommit)=>{
+      const ref = commit.refs?.trim();
+      if(!ref) return undefined;
+      const branches = this.getBranchFromReference(ref);
+      if(!branches?.length)return undefined;
+      let branchWithRemotes = branches.map(b=> this.getBranchRemote(b));
+      branchWithRemotes = branchWithRemotes.filter((b,index,arr)=> arr.findIndex(x=>x.branchName === b.branchName) === index);
+      const branchNames = branchWithRemotes.map(x=>x.branchName);
+      branchNames;
+    }
+
+    getBranchRemote=(branchNameStr:string)=>{
+      let branchName = "";
+      let remote = "";
+      let splits = branchNameStr.split("/");
+      if (splits.length > 1) {
+        branchName = splits[1];
+        remote = splits[0];
+      }
+      else {
+        branchName = branchNameStr;
+      }
+      const branchRemote:IBranchRemote={
+        branchName:branchName,
+        remote:remote,
+      }
+      return branchRemote;
+    }
+
     setUniqueBranchNames=()=>{
       const uniqueBranchNames:string[]=[];
       this.repoInfo.branchSummery.all.forEach(b=>{
@@ -183,7 +304,7 @@ export class GitManager{
     }
 
     getFirstReferenceDateByBranch=(branchName:string)=>{
-      const branch = this.repoInfo.lastReferencesByBranch.find(x=>x.branchName === branchName);
+      const branch = this.repoInfo.lastReferencesByBranch.find(x=>x.message === branchName);
       if(branch) return branch.dateTime;
     
       let firstReferenceDate = new Date().toISOString();
@@ -192,7 +313,7 @@ export class GitManager{
           if(moment(commit.date).isBefore(firstReferenceDate) ) firstReferenceDate = commit.date;
       });
       this.repoInfo.lastReferencesByBranch.push({
-        branchName:branchName,
+        message:branchName,
         dateTime:firstReferenceDate,
       })
       return firstReferenceDate;      
@@ -271,7 +392,7 @@ export class GitManager{
       this.repoInfo.uniqueBrancNames.forEach(name=>{
         const branch = this.repoInfo.branchDetails.find(x=>x.name === name);
         if(!branch) return;
-        branch.lastCommitsByRemotes.push({commitHash:branch.commits[0],remote:""});
+        branch.lastCommitsByRemotes.push({commitHash:branch.commits[0].hash,remote:""});
 
         this.repoInfo.remotes.forEach(r=>{
           const remoteBranchName = "remotes/"+r+"/"+name;
@@ -279,7 +400,7 @@ export class GitManager{
           if(!remoteBranch) return;
 
           branch.lastCommitsByRemotes.push({
-            commitHash:remoteBranch.commits[0],
+            commitHash:remoteBranch.commits[0].hash,
             remote:r,
           });
 
@@ -325,7 +446,7 @@ export class GitManager{
 
     isOwnerBranch=(commit:ICommit,branch:BranchDetails)=>{
       if(branch.commits[0].hash === commit.hash) return true;
-      const lastReference = this.repoInfo.lastReferencesByBranch.find(b=>b.branchName === branch.name)?.dateTime!;
+      const lastReference = this.repoInfo.lastReferencesByBranch.find(b=>b.message === branch.name)?.dateTime!;
       if(moment(lastReference).isBefore(commit.date)) return true;
       if(branch.name === 'master') return true;
       if(branch.name === 'main') return true;      
