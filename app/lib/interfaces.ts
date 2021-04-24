@@ -5,7 +5,7 @@ export interface ICommit extends DefaultLogFields{
   avrebHash:string;
   branchesFromThis:BranchDetails[];
   parentHashes:string[];
-  ownerBranch?:BranchDetails;
+  ownerBranch:BranchDetails;
   referedBranches?:string[];
   branchNameWithRemotes?:IBranchRemote[];
   nextCommit?:ICommit;
