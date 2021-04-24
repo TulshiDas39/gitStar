@@ -145,29 +145,28 @@ export class GitManager{
         const currentCommit = commits[i];
         currentCommit.referedBranches = this.getBranchFromReference(currentCommit.refs);
         currentCommit.branchNameWithRemotes = currentCommit.referedBranches?.map(x=>this.getBranchRemote(x));        
-        let parentCommit:ICommit = null!;
-        let parentBranch:BranchDetails=null!;
-        if("has branch ref"){
-            if("has any remote branch"){
-                if("parent branch is of same name"){
-
-                }
-                else if("parent branch is local different"){
-                  if("parent of local branch is same branch"){
-                    
-                  }
-                }
-                else{
-                  //make the unnamed branch as remote branch
-                }
-            }
-            else{
-
-            }
+        let parentCommit:ICommit = null!;//get parent commit
+        let branch:BranchDetails ;
+        if(parentCommit){
+          //set the branch from owner branch property of parent commit
+          //set next commit of parent commit
+          //set previous commit of current commit
+        }
+        else{
+          //create new unnamed branch and assign it to branch
+          //push it to branch list
         }
 
+        if("has branch ref"){
+            if("has parent branch && parent branch same"){
+              //push all the commits of current branch to parent branch and delete the current branch
+            }
+            else{
+              //set the current branch name,push the commit to this branch
+            }
+        }
         else{
-
+          //push to the branch
         }
       }
     }

@@ -8,6 +8,8 @@ export interface ICommit extends DefaultLogFields{
   ownerBranch?:BranchDetails;
   referedBranches?:string[];
   branchNameWithRemotes?:IBranchRemote[];
+  nextCommit?:ICommit;
+  previousCommit?:ICommit;
 }
 
 export interface IRepository{
@@ -55,6 +57,7 @@ export interface BranchDetails{
   commits:ICommit[];
   lastCommitsByRemotes:ILastCommitByRemote[];
   noDerivedCommits:boolean;
+  parentBranch?:BranchDetails;
 }
 
 export interface IBranchRemote{
