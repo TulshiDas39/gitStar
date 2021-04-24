@@ -148,9 +148,15 @@ export class GitManager{
         let parentCommit:ICommit = null!;//get parent commit
         let branch:BranchDetails ;
         if(parentCommit){
-          //set the branch from owner branch property of parent commit
-          //set next commit of parent commit
-          //set previous commit of current commit
+          if(parentCommit.nextCommit){
+            //create new unnamed branch and assign it to branch
+            //set parent branch of new branch
+            //
+            //push it to branch list
+          }else{
+              //set the branch from owner branch property of parent commit
+              //set next commit of parent commit
+          }                  
         }
         else{
           //create new unnamed branch and assign it to branch

@@ -3,7 +3,7 @@ import { IStore } from "../store";
 
 export interface ICommit extends DefaultLogFields{
   avrebHash:string;
-  branchesFromThis?:BranchDetails[];
+  branchesFromThis:BranchDetails[];
   parentHashes:string[];
   ownerBranch?:BranchDetails;
   referedBranches?:string[];
@@ -57,7 +57,7 @@ export interface BranchDetails{
   commits:ICommit[];
   lastCommitsByRemotes:ILastCommitByRemote[];
   noDerivedCommits:boolean;
-  parentBranch?:BranchDetails;
+  parentCommit?:ICommit;
 }
 
 export interface IBranchRemote{
