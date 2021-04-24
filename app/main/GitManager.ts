@@ -158,18 +158,19 @@ export class GitManager{
         const currentCommit = commits[i];
         currentCommit.referedBranches = this.getBranchFromReference(currentCommit.refs);
         currentCommit.branchNameWithRemotes = currentCommit.referedBranches?.map(x=>this.getBranchRemote(x));        
-        let parentCommit = commits.find(c=>c.avrebHash === currentCommit.parentHashes[0]);
-        if(parentCommit){
-          if(parentCommit.nextCommit){
+        let previousCommit = commits.find(c=>c.avrebHash === currentCommit.parentHashes[0]);
+        //console.log()
+        if(previousCommit){
+          if(previousCommit.nextCommit){
             //create new unnamed branch and assign it to branch
-            createNewBranch(parentCommit);
+            createNewBranch(previousCommit);
             //currentCommit.ownerBranch
             //set parent commit of new branch
             //this.repoInfo.branchDetails.push(branch);
             //push it to branch list
           }else{
               //set the branch from owner branch property of parent commit
-              ownerBranch=parentCommit.ownerBranch;              
+              ownerBranch=previousCommit.ownerBranch;              
           }                  
         }
         else{
@@ -177,6 +178,8 @@ export class GitManager{
           createNewBranch();
           //currentCommit.ownerBranch = branch;
         }
+
+        currentCommit.ownerBranch = ownerBranch;
 
         if(!!currentCommit.branchNameWithRemotes?.length){
             //check parent branch is same
@@ -187,14 +190,14 @@ export class GitManager{
               ownerBranch.commits.forEach(c=>{
                 c.ownerBranch = parentBranch;
               });
-              if(ownerBranch.parentCommit) ownerBranch.parentCommit.branchesFromThis = ownerBranch.parentCommit.branchesFromThis.filter(x=>x.n)
-              ownerBranch=parentBranch;
+              //if(ownerBranch.parentCommit) ownerBranch.parentCommit.branchesFromThis = ownerBranch.parentCommit.branchesFromThis.filter(x=>x.n)
+              currentCommit.ownerBranch=parentBranch;
             }
             else{
               //set the current branch name,push the commit to this branch
               const remoteBranch = currentCommit.branchNameWithRemotes?.find(x=>!!x.remote);
-              ownerBranch.name = remoteBranch?.branchName|| currentCommit.branchNameWithRemotes[0].branchName;
-              ownerBranch.commits.forEach(c=>{
+              currentCommit.ownerBranch.name = remoteBranch?.branchName|| currentCommit.branchNameWithRemotes[0].branchName;
+              currentCommit.ownerBranch.commits.forEach(c=>{
                 c.ownerBranch = ownerBranch;
               })
               const parentCommitOfOwnerBranch = ownerBranch.parentCommit;
@@ -204,10 +207,10 @@ export class GitManager{
             }
         }        
 
-        ownerBranch.commits.push(currentCommit);
-        if(ownerBranch.name) {
-          currentCommit.ownerBranch = ownerBranch;
-          currentCommit.previousCommit = parentCommit;
+        currentCommit.ownerBranch.commits.push(currentCommit);
+        if(currentCommit.ownerBranch.name) {
+          //currentCommit.ownerBranch = ownerBranch;
+          currentCommit.previousCommit = previousCommit;
         }
       }
     }
