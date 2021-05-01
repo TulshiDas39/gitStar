@@ -97,7 +97,8 @@ export class GitManager{
       const logCallBack=(_e,data:string)=>{
         const commits = CommitParser.parseLog(data);
         this.repoInfo.allCommits.push(...commits);
-        this.setResolvedBranch(commits);
+        //this.setResolvedBranch(commits);
+        this.createTree2();
         this.sendRepoInfoToRenderer();
         // mainWindow?.webContents.send(Main_Events.REPO_INFO,this.repoInfo);
       }
@@ -164,6 +165,7 @@ export class GitManager{
           if(previousCommit.nextCommit){
             //create new unnamed branch and assign it to branch
             createNewBranch(previousCommit);
+            //if(this.repoInfo.lastReferencesByBranch.some(x=>x.message.includes(`branch ${}`)))
             //currentCommit.ownerBranch
             //set parent commit of new branch
             //this.repoInfo.branchDetails.push(branch);
@@ -212,8 +214,19 @@ export class GitManager{
           //currentCommit.ownerBranch = ownerBranch;
           currentCommit.previousCommit = previousCommit;
         }
+        this.setReference(currentCommit);
       }
     }
+
+    moveCommitsToNewBranch=(commit:ICommit,branch:BranchDetails)=>{
+      const existingBranch = commit.ownerBranch;
+      const commitIndex = existingBranch.commits.findIndex(x=>x.hash === commit.hash);
+      const commitsToMove = existingBranch.commits.splice(0,commitIndex+1);
+      commitsToMove.forEach(x=>x.ownerBranch = branch);
+      branch.commits=[...commitsToMove,...branch.commits];
+
+    }
+
     createTree=()=>{
       const commits = this.repoInfo.allCommits.slice();
       const tree:BranchDetails[] = [];
@@ -283,6 +296,10 @@ export class GitManager{
           }
         }      
       }      
+    }
+
+    sendTestData=(data:any)=>{
+      mainWindow?.webContents.send(Main_Events.TEST,data);
     }
 
     tryResolveBranchName=(commit:ICommit,branch:BranchDetails)=>{      
