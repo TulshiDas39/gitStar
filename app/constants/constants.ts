@@ -43,3 +43,5 @@ export enum LogFields{
   Ref="Ref",
   Message="Message",
 }
+
+export const MainBranchName:string[]=["master"]

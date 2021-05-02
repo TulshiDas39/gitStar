@@ -1,10 +1,10 @@
 import { FileManager } from "./FileManager";
-import simpleGit, { BranchSummary, GitError, LogResult, SimpleGit, SimpleGitOptions } from 'simple-git';
+import simpleGit, { BranchSummary, GitError, SimpleGit, SimpleGitOptions } from 'simple-git';
 import path from "path";
 import { app, ipcMain } from "electron";
 import { mainWindow } from "../main.dev";
-import { Main_Events, Renderer_Events } from "../constants/constants";
-import { BranchDetails, IBranchRemote, ICommit, ILastCommitByRemote, ILastReference, IRepository, IRepositoryInfo, IResolvedBranch } from "../lib";
+import { MainBranchName, Main_Events, Renderer_Events } from "../constants/constants";
+import { BranchDetails, IBranchRemote, ICommit, ILastCommitByRemote, IRepository, IRepositoryInfo, IResolvedBranch } from "../lib";
 import moment from "moment";
 import { CommitParser } from "../lib/utils/CommitParser";
 import { LogFormat } from "./commands";
@@ -112,32 +112,10 @@ export class GitManager{
         const branches = this.getBranchFromReference(commit.refs);
 
         if(!branches?.length) continue;
-        // branches.forEach(b=>{
-        //   b = b.trim();
-        //   b = this.setHeadCommit(b, commit);
-        //   const branchRemote = this.getBranchRemote(b);         
-        //   let resolvedBranch = this.repoInfo.resolvedBranches.find(x=>x.name === branchRemote.branchName)!;
-        //   if(!resolvedBranch) {
-        //     resolvedBranch = {
-        //       lastReferenceDate:commit.date,
-        //       lastCommitByRemote:[],
-        //       firstCommitHash:"",
-        //       name:branchRemote.branchName,
-        //       commits:[],
-        //       latestCommit:commit
-        //     } as IResolvedBranch;
-        //     this.repoInfo.resolvedBranches.push(resolvedBranch);
-        //   }else{
-        //     if(moment(commit.date).isBefore(resolvedBranch.latestCommit.date)) resolvedBranch.latestCommit = commit;
-        //   }
-        //   resolvedBranch.lastCommitByRemote.push({
-        //     commitHash:commit.hash,
-        //     remote:branchRemote.remote,
-        //   });
-
-        // })
       }
       this.createTree2();
+      this.fixTreeSubBranches();
+
     }
     createTree2(){
       const commits = this.repoInfo.allCommits.slice();
@@ -157,9 +135,11 @@ export class GitManager{
       }
       for(let i=commits.length-1; i>=0; i--){
         const currentCommit = commits[i];
+        this.setReference(currentCommit);
         currentCommit.referedBranches = this.getBranchFromReference(currentCommit.refs);
         currentCommit.branchNameWithRemotes = currentCommit.referedBranches?.map(x=>this.getBranchRemote(x));        
         let previousCommit = commits.find(c=>c.avrebHash === currentCommit.parentHashes[0]);
+
         //console.log()
         if(previousCommit){
           if(previousCommit.nextCommit){
@@ -214,7 +194,31 @@ export class GitManager{
           //currentCommit.ownerBranch = ownerBranch;
           currentCommit.previousCommit = previousCommit;
         }
-        this.setReference(currentCommit);
+      }
+    }
+    fixTreeSubBranches=()=>{
+      for(let branch of this.repoInfo.branchDetails){
+        if(branch.noDerivedCommits) continue;
+        if(MainBranchName.includes(branch.name)) {
+          branch.noDerivedCommits = true;
+          continue;
+        }
+        const parentCommit = branch.parentCommit!;
+        let foundOwnerBranch:BranchDetails=null!;        
+        for(let subBranch of parentCommit.branchesFromThis){
+          if(this.repoInfo.lastReferencesByBranch.some(ref=>ref.message.includes(`branch ${subBranch.name}`) &&
+                moment(ref.dateTime).isBefore(parentCommit.date) )
+                || MainBranchName.includes(subBranch.name)){
+            foundOwnerBranch = subBranch
+            break;
+          }
+        }
+        if(foundOwnerBranch) {
+          this.moveCommitsToNewBranch(parentCommit,foundOwnerBranch);          
+        }
+        parentCommit.branchesFromThis.forEach(br=>br.noDerivedCommits = true);
+        branch.noDerivedCommits = true;
+        parentCommit.ownerBranch.noDerivedCommits = true;
       }
     }
 
@@ -225,77 +229,6 @@ export class GitManager{
       commitsToMove.forEach(x=>x.ownerBranch = branch);
       branch.commits=[...commitsToMove,...branch.commits];
 
-    }
-
-    createTree=()=>{
-      const commits = this.repoInfo.allCommits.slice();
-      const tree:BranchDetails[] = [];
-      for(let i=commits.length-1; i>=0; i--){
-        const currentCommit = commits[i];
-        currentCommit.referedBranches = this.getBranchFromReference(currentCommit.refs);
-        currentCommit.branchNameWithRemotes = currentCommit.referedBranches?.map(x=>this.getBranchRemote(x));        
-        let parentCommit:ICommit = null!;
-        let parentBranch:BranchDetails=null!;
-        for(let b of tree){
-          let pCommit  = b.commits.find(x=>x.avrebHash === currentCommit.parentHashes[0]);
-          if(pCommit) {
-            parentCommit = pCommit;
-            parentBranch = b;
-            break;
-          }
-        }
-        if(!parentBranch){
-          parentBranch ={
-            commits:[currentCommit],
-            lastCommitsByRemotes:[],
-            name:"",
-            noDerivedCommits:false,
-           }
-          tree.push(parentBranch);
-        }
-        if(!!currentCommit.branchNameWithRemotes?.length) {
-          if(!parentBranch.name) {
-            this.tryResolveBranchName(currentCommit,parentBranch);
-            if(!!parentBranch.name) continue;
-          }
-          else if(parentCommit && !parentCommit.branchesFromThis?.length){
-            this.handleNewBranch(currentCommit,parentBranch);
-            continue;
-          }
-        }
-
-        if(!parentCommit) continue;        
-
-        let index = parentBranch.commits.findIndex(x=>x.hash === parentCommit.hash);
-
-        if(index === 0){
-          if(!parentCommit.branchesFromThis?.length) parentBranch.commits = [currentCommit, ...parentBranch.commits];
-          else{
-            //create new branch from current commit
-          }
-        }
-        else{
-          ////create new branch from current commit
-          if(!parentCommit.branchesFromThis?.length) parentCommit.branchesFromThis = [];
-          let newBranch:BranchDetails={
-            name:"",
-            commits:[parentCommit,commits[i]],
-            lastCommitsByRemotes:[],
-            noDerivedCommits:false,
-          }
-          parentCommit.branchesFromThis.push(newBranch);
-          if(index !== 0 && parentCommit.branchesFromThis.length ==1) {
-            parentCommit.branchesFromThis.push(
-              {
-                name:"",
-                commits:[...parentBranch.commits.splice(0,index+1)],
-                lastCommitsByRemotes:[],
-                noDerivedCommits:false,
-              }                
-            )              
-          }
-        }      
-      }      
     }
 
     sendTestData=(data:any)=>{
